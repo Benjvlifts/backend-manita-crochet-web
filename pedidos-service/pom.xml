@@ -12,9 +12,9 @@
     </parent>
 
     <groupId>cl.manitacrochet</groupId>
-    <artifactId>lanas-service</artifactId>
+    <artifactId>pedidos-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>lanas-service</name>
+    <name>pedidos-service</name>
 
     <properties>
         <java.version>17</java.version>
