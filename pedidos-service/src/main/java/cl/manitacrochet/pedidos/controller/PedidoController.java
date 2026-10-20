@@ -1,5 +1,6 @@
 package cl.manitacrochet.pedidos.controller;
 
+import cl.manitacrochet.pedidos.messaging.producer.PedidoProducer;
 import cl.manitacrochet.pedidos.model.Pedido;
 import cl.manitacrochet.pedidos.repository.PedidoRepository;
 import org.springframework.http.HttpStatus;
@@ -20,9 +21,11 @@ import java.util.Map;
 public class PedidoController {
 
     private final PedidoRepository repository;
+    private final PedidoProducer producer;
 
-    public PedidoController(PedidoRepository repository) {
+    public PedidoController(PedidoRepository repository, PedidoProducer producer) {
         this.repository = repository;
+        this.producer = producer;
     }
 
     @GetMapping("/public/health")
@@ -41,6 +44,8 @@ public class PedidoController {
     public ResponseEntity<Pedido> crear(@RequestBody Pedido nuevoPedido) {
         Pedido pedido = new Pedido(nuevoPedido.getCliente(), nuevoPedido.getLanaId(), nuevoPedido.getCantidad());
         Pedido guardado = repository.save(pedido);
+        // EP3: avisa de forma asíncrona (notificación + ticket); si RabbitMQ falla, el pedido igual queda creado.
+        producer.publicarPedidoCreado(guardado);
         return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
@@ -50,7 +55,10 @@ public class PedidoController {
         return repository.findById(id)
                 .map(pedido -> {
                     pedido.setEstado(body.getOrDefault("estado", pedido.getEstado()));
-                    return ResponseEntity.ok(repository.save(pedido));
+                    Pedido actualizado = repository.save(pedido);
+                    // EP3: notifica el cambio de estado de forma asíncrona.
+                    producer.publicarEstadoActualizado(actualizado);
+                    return ResponseEntity.ok(actualizado);
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

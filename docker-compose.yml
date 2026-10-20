@@ -1,0 +1,13 @@
+# RabbitMQ para desarrollo local (EP3).
+#   docker compose up -d
+# Consola de administración: http://localhost:15672  (usuario: guest / clave: guest)
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: pedidos360-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP (lo usan pedidos-service y rabbitmq-admin-service)
+      - "15672:15672"   # consola web
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
