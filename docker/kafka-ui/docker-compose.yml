@@ -1,0 +1,24 @@
+# Kafka-UI: administración de brokers, tópicos y consumer groups desde el navegador.
+# Requiere que el clúster de docker/kafka esté arriba (comparte su red Docker).
+#   docker compose up -d      ->  http://localhost:8090
+name: pedidos360-kafka-ui
+
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: pedidos360-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: pedidos360
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:29092,kafka2:29092,kafka3:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - kafka-net
+
+networks:
+  kafka-net:
+    external: true
+    name: pedidos360-kafka-net

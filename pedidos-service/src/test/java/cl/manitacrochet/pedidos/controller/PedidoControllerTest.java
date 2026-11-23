@@ -1,5 +1,6 @@
 package cl.manitacrochet.pedidos.controller;
 
+import cl.manitacrochet.pedidos.kafka.dto.PedidoKafkaEvent;
 import cl.manitacrochet.pedidos.messaging.event.PedidoEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -7,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,7 +28,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * igual que en lanas-service. No dependen de red, del tenant real ni de un RabbitMQ levantado:
  * RabbitTemplate se reemplaza por un mock y los listeners no se inician.
  */
-@SpringBootTest(properties = "spring.rabbitmq.listener.simple.auto-startup=false")
+@SpringBootTest(properties = {
+        "spring.rabbitmq.listener.simple.auto-startup=false",
+        "spring.kafka.listener.auto-startup=false",
+        "spring.kafka.admin.auto-create=false"})
 @AutoConfigureMockMvc
 class PedidoControllerTest {
 
@@ -35,6 +40,10 @@ class PedidoControllerTest {
 
     @MockBean
     private RabbitTemplate rabbitTemplate;
+
+    // Sin brokers en las pruebas: Kafka también se simula.
+    @MockBean
+    private KafkaTemplate<String, PedidoKafkaEvent> kafkaTemplate;
 
     @Test
     void healthEsPublicoSinToken() throws Exception {
@@ -82,6 +91,8 @@ class PedidoControllerTest {
 
         // Un evento hacia la cola de notificaciones y otro hacia la de tickets.
         verify(rabbitTemplate, times(2)).convertAndSend(anyString(), anyString(), any(PedidoEvent.class));
+        // EP5: y un evento en el tópico de Kafka.
+        verify(kafkaTemplate).send(anyString(), anyString(), any(PedidoKafkaEvent.class));
     }
 
     @Test
@@ -93,5 +104,6 @@ class PedidoControllerTest {
                 .andExpect(status().isOk());
 
         verify(rabbitTemplate, times(1)).convertAndSend(anyString(), anyString(), any(PedidoEvent.class));
+        verify(kafkaTemplate).send(anyString(), anyString(), any(PedidoKafkaEvent.class));
     }
 }

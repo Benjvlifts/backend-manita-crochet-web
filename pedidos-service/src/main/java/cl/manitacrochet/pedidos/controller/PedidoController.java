@@ -1,5 +1,6 @@
 package cl.manitacrochet.pedidos.controller;
 
+import cl.manitacrochet.pedidos.kafka.producer.PedidoKafkaProducer;
 import cl.manitacrochet.pedidos.messaging.producer.PedidoProducer;
 import cl.manitacrochet.pedidos.model.Pedido;
 import cl.manitacrochet.pedidos.repository.PedidoRepository;
@@ -22,10 +23,12 @@ public class PedidoController {
 
     private final PedidoRepository repository;
     private final PedidoProducer producer;
+    private final PedidoKafkaProducer kafkaProducer;
 
-    public PedidoController(PedidoRepository repository, PedidoProducer producer) {
+    public PedidoController(PedidoRepository repository, PedidoProducer producer, PedidoKafkaProducer kafkaProducer) {
         this.repository = repository;
         this.producer = producer;
+        this.kafkaProducer = kafkaProducer;
     }
 
     @GetMapping("/public/health")
@@ -46,6 +49,8 @@ public class PedidoController {
         Pedido guardado = repository.save(pedido);
         // EP3: avisa de forma asíncrona (notificación + ticket); si RabbitMQ falla, el pedido igual queda creado.
         producer.publicarPedidoCreado(guardado);
+        // EP5: además queda el hecho en el log de eventos de Kafka (historial y analítica).
+        kafkaProducer.publicarPedidoCreado(guardado);
         return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
     }
 
@@ -58,6 +63,7 @@ public class PedidoController {
                     Pedido actualizado = repository.save(pedido);
                     // EP3: notifica el cambio de estado de forma asíncrona.
                     producer.publicarEstadoActualizado(actualizado);
+                    kafkaProducer.publicarEstadoActualizado(actualizado);
                     return ResponseEntity.ok(actualizado);
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());

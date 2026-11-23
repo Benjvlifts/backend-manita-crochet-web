@@ -1,5 +1,6 @@
 package cl.manitacrochet.lanas.controller;
 
+import cl.manitacrochet.lanas.kafka.producer.LanaKafkaProducer;
 import cl.manitacrochet.lanas.model.Lana;
 import cl.manitacrochet.lanas.repository.LanaRepository;
 import org.springframework.http.HttpStatus;
@@ -18,9 +19,11 @@ import java.util.Map;
 public class LanaController {
 
     private final LanaRepository repository;
+    private final LanaKafkaProducer kafkaProducer;
 
-    public LanaController(LanaRepository repository) {
+    public LanaController(LanaRepository repository, LanaKafkaProducer kafkaProducer) {
         this.repository = repository;
+        this.kafkaProducer = kafkaProducer;
     }
 
     @GetMapping("/public/health")
@@ -39,6 +42,8 @@ public class LanaController {
     public ResponseEntity<Lana> crear(@RequestBody Lana nuevaLana) {
         Lana lana = new Lana(nuevaLana.getNombre(), nuevaLana.getColor(), nuevaLana.getPrecio());
         Lana guardada = repository.save(lana);
+        // EP5: publica el hecho en Kafka; si Kafka falla, la lana igual queda creada.
+        kafkaProducer.publicarLanaCreada(guardada);
         return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
     }
 }
