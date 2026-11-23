@@ -1,0 +1,10 @@
+.vscode/
+.idea/
+*.iml
+target/
+*.log
+.env
+*.pem
+*.key
+application-local.properties
+application-prod.properties
